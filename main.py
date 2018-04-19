@@ -5,7 +5,6 @@ import torchvision.datasets as datasets
 import torch.utils.data as data
 
 import torchvision.transforms as transforms
-from graphviz import Digraph
 
 import math
 
@@ -91,7 +90,7 @@ class Bottleneck(nn.Module):
         if self.downsample is not None:
             residual = self.downsample(x)
 
-        print(f"out: {out.size()} - residual: {residual.size()}")
+        # print(f"out: {out.size()} - residual: {residual.size()}")
         out += residual
         out = self.relu(out)
 
@@ -151,7 +150,7 @@ class ResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        print(f"avgpool: {self.avgpool} - c: {x.size()}")
+        # print(f"avgpool: {self.avgpool} - c: {x.size()}")
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
@@ -163,6 +162,7 @@ class ResNet(nn.Module):
 
 if __name__ == "__main__":
     net = ResNet(Bottleneck, [3, 4, 6, 3])
+    net.cuda()
 
     # loss function + optimizer
     criterion = nn.CrossEntropyLoss()
@@ -192,8 +192,8 @@ if __name__ == "__main__":
             input, target = data
 
             # wrap input + target into variables
-            input_var = torch.autograd.Variable(input)
-            target_var = torch.autograd.Variable(target)
+            input_var = torch.autograd.Variable(input).cuda()
+            target_var = torch.autograd.Variable(target).cuda()
 
             # compute output
             output = net(input_var)

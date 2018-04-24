@@ -6,11 +6,13 @@ import torch.utils.data as data
 
 import torchvision.transforms as transforms
 
+from torch.autograd import Variable
+
 import math
+import os
 
 
 model_url = 'https://download.pytorch.org/models/resnet50-19c8e357.pth'
-
 
 # --- HELPERS ---
 
@@ -162,19 +164,29 @@ class ResNet(nn.Module):
 
 if __name__ == "__main__":
     net = ResNet(Bottleneck, [3, 4, 6, 3])
-    net.cuda()
+
+    cuda = False if os.getenv('CUDA') == 'False' else True
+    print(f"Using CUDA: {cuda}")
+
+    if cuda:
+        net.cuda()
+    else:
+        cuda
 
     # loss function + optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 
     # load data set
-    train_dir = '/data/tiny-imagenet-200/train'
-    val_dir = '/data/tiny-imagenet-200/val'
+    print(f"Reading data...")
+    train_dir = 'data/tiny-imagenet-200/train'
+    val_dir = 'data/tiny-imagenet-200/val'
     train_dataset = datasets.ImageFolder(train_dir, transform=transforms.ToTensor())
     val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
     train_loader = data.DataLoader(train_dataset, batch_size=32)
+    print(f"Loaded: {train_dir}")
     val_loader = data.DataLoader(val_dataset, batch_size=32)
+    print(f"Loaded: {val_dir}")
 
     '''
     train_dataset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transforms.ToTensor())
@@ -185,15 +197,15 @@ if __name__ == "__main__":
     # train the model
     learning_rate = 0.01
     for epoch in range(100):
-
+        print(f"-- EPOCH: {epoch}")
         running_loss = 0.0
         for i, data in enumerate(train_loader, 0):
-
+            print(f"-- ITERATION: {i}")
             input, target = data
 
             # wrap input + target into variables
-            input_var = torch.autograd.Variable(input).cuda()
-            target_var = torch.autograd.Variable(target).cuda()
+            input_var = Variable(input).cuda() if cuda else Variable(input)
+            target_var = Variable(target).cuda() if cuda else Variable(target)
 
             # compute output
             output = net(input_var)
@@ -207,9 +219,8 @@ if __name__ == "__main__":
             # print progress
             running_loss += loss.data[0]
             if i % 2000 == 1999:  # print every 2k mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 2000))
+                print(f"-- RUNNING_LOSS: {running_loss / 2000}")
                 running_loss = 0.0
 
     print('Finished Training')
-    torch.save(net.state_dict(), "/models")
+    torch.save(net.state_dict(), "/models/baseline-resnet50.pt")
